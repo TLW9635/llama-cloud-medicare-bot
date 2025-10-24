@@ -26,17 +26,35 @@ else:
     @st.cache_resource(show_spinner="Connecting to LlamaCloud Index...")
     def get_chat_engine():
         try:
-            # CHANGE 4: Initialize the Gemini LLM
-            # NOTE: Change the model name if you use something other than gemini-2.5-flash
-            Settings.llm = GoogleGenAI(model="gemini-2.5-flash", temperature=0.1)
+           # Define the Master Prompt (System Prompt)
+            MASTER_PROMPT = (
+                "You are an expert, helpful, and highly accurate Medicare knowledge assistant. "
+                "Your primary goal is to answer questions ONLY using the information retrieved from the 'TBL Medicare Knowledge Base'. "
+                "DO NOT use general knowledge or make up facts. "
+                "When answering, you MUST be concise and highly accurate. "
+                "After the main answer, you MUST provide a separate 'Source Reference' section. "
+                "In the Source Reference section, list the Title and Page Number of the documents used to formulate the answer. "
+                "If the provided context does not contain the answer, state clearly that you cannot find the information in the documents. "
+                "Maintain a professional and friendly tone."
+            )
+            
+            # Initialize the Gemini LLM with the new system prompt
+            Settings.llm = GoogleGenAI(
+                model="gemini-2.5-flash", 
+                temperature=0.1, 
+                system_prompt=MASTER_PROMPT # <-- This is the key line
+            )
 
             # Connect to your EXISTING LlamaCloud Index
             index_name = "TBL Medicare Knowledge Base" 
             index = LlamaCloudIndex(name=index_name)
 
             # Create the chat engine (a conversational interface)
+            # 'compact' mode ensures a single, concise response is synthesized from all retrieved sources.
+            # 'verbose=True' helps with debugging.
             chat_engine = index.as_chat_engine(
                 chat_mode="condense_question",
+                response_mode="compact", # <-- NEW: Uses all sources to create a concise answer
                 verbose=True,
             )
             return chat_engine
